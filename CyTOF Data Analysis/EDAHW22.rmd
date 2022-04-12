@@ -1,0 +1,164 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+
+```{r}
+cytof = read_csv("https://jfukuyama.github.io/teaching/stat670/notes/cytof_one_experiment.csv")
+```
+
+
+```{r}
+head(cytof)
+```
+
+
+# Q.1)
+
+# Answer
+
+1. Converting the CyTOF dataset from wide form to a longer form
+2. We first check the column names and number of col names
+
+```{r}
+colnames(cytof)
+```
+```{r}
+ncol(cytof)
+```
+
+
+
+
+```{r}
+cytof_long= cytof %>%
+  pivot_longer(c(colnames(cytof)),names_to = "markers",values_to = "values")
+```
+
+
+3. This is the data we get after converting to longer form
+
+```{r}
+head(cytof_long)
+```
+
+4. Now we plot the faceted plots for distributions of all markers using density plot and
+also we created a histogram plot for the same
+
+```{r}
+marker_gg = ggplot(cytof_long,aes(x=values)) + geom_density()
+marker_gg + facet_wrap(~ markers , nrow = 5) + ggtitle("Distribution of markers")
+```
+
+
+```{r}
+marker_gg = ggplot(cytof_long,aes(x=values)) + geom_histogram()
+marker_gg + facet_wrap(~ markers , nrow = 5) + ggtitle("Distribution of markers")
+```
+
+5. From the above faceted plots, we see the folloing:
+  a. Markers like CD56 and CD69 show similar distribution.
+  b. When we check the mean and median values for all the distribution using summary method(refer Q.3),we see that there are very few markers who follow a normal distribution.
+  c. Mostly the markers are right-skewed and left-skewed based on the values of mean and median.
+  d. The standard deviation for most of the markers is around 1 or in most cases greater than 1. So the distribution is quite spread out out.
+  e. Also we see that markers KRDL1 and CD8 are also similar in distribution.
+
+
+
+
+# Q.2)
+
+# Answer:
+
+1. Here from looking at the graph, we took two sets of markers
+2. For the first set, we took the markers CD69 and CD56 because they almost are 
+similar in distribution.
+
+
+```{r}
+CD69 <- filter(cytof_long, markers == "CD69") %>%  pull(values)
+```
+
+
+```{r}
+CD56 <- filter(cytof_long, markers == "CD56") %>%  pull(values)
+```
+
+
+```{r}
+qqplot(x=CD69,y=CD56)
+abline(h=median(CD69),col="blue")
+abline(v=median(CD56),col="red")
+title("Q-Q plot for Markers: CD69 and CD56")
+```
+3. Here since the distributions are almost similar, the points for the quartiles lie
+almost in a straight line except for the region near the origin.
+4. Near this region, the quartiles seem to increase exponentially
+5. We then plot the median for both the marker and we see that the median value for marker
+CD56 is around 4.5 and the median for marker CD69 is around 5.7
+6. Since median values of both the markers are different and shape of distribution is almost
+the same, this is a simple shift.
+7. For the parts around -0.6 to 0 the quartiles are increasing and then after 0 the quartiles fall in a line.
+
+
+```{r}
+CD57 <- filter(cytof_long, markers == "CD57") %>%  pull(values)
+```
+
+```{r}
+qqplot(x=CD56,y=CD57)
+abline(h=median(CD57),col='blue')
+abline(v=median(CD56),col='red')
+title("Q-Q plot for Markers: CD57 and CD56")
+
+```
+8. For the second set, we took the markers CD57 and CD56 because they are 
+dissimilar in distribution.
+9. Here since the distributions are not similar, the points for the quartiles do not lie
+in a straight line.
+10. We check the median values for the markers CD57 and CD56.
+11. The median value for CD57 is around 3 and median value for CD56 is around 5.7
+12. Since the values of medians for both the markers is different and the shape of distribution is also different the shift for this distribution seems to be complex
+13. For the parts around -0.6 to 0, there seems to be outliers in that region, after around 0.2 till 4, the quartiles are steady and after 4.5 onwards the quartiles are exponentially increaing.
+
+
+# Q.3)
+
+# Answer:
+1. We first computed the statistics on the basis of all markers
+2. From this, we get the value of mean,median,1st quartile,3rd quartile,min and max
+
+```{r}
+by(cytof_long,cytof_long$markers,summary)
+```
+3. We also computed other statistical data which was not previously computed using the summary method 
+4. Here we computed the measures of spread of distributions for all the markers by first
+finding the standard deviation and then the IQR
+5. We see that for most of the markers, the standard deviation is greater than 1 and very close to 1 so we can say that the data is more spread out for the markers.
+
+```{r}
+cytof_long %>% group_by(markers) %>% summarise(sd(values)) 
+```
+
+```{r}
+cytof_long %>% group_by(markers) %>% summarise(IQR(values)) 
+```
+
+6. Now for plotting the statistical data, we have chosen box plot.
+7. From box plot we get to see the data for the median, the 1st and 3rd quartile, the min and the max values for all the markers
+8. As compared to the full distribution we plotted before, this gives a fairly better statistical measure for the data as opposed to the histogram where we have to estimate the values of mean and spread.
+
+
+```{r}
+ggplot(cytof_long) +
+  aes(x = markers, y =values) +
+  geom_boxplot() + coord_flip()
+```
+
