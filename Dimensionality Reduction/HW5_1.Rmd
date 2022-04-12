@@ -1,0 +1,149 @@
+---
+title: "HW5"
+author: "Mahadevan Iyer"
+date: "07/03/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("lattice.RData")
+library(ggplot2)
+library(devtools)
+library(ade4)
+library(ggbiplot)
+library(viridis)
+library(tidyverse)
+library(dplyr)
+library(ggrepel)
+```
+
+
+```{r}
+head(hamster)
+```
+## 1
+Do a PCA of the organ weights and create a PCA biplot. Do you think it’s useful to
+standardize the variables (scale. = TRUE in the prcomp function)? Does the PCA with
+the standardized variables tell you something different than the PCA with variables on the
+un-standardized variables?
+
+```{r}
+summary(hamster)
+```
+
+* From the above summary statistics we can see that liver and testes a greater variation than other features. 
+
+```{r}
+hamster_noscale = prcomp(hamster, scale. = FALSE)
+ggbiplot(hamster_noscale, scale = 1) +
+  labs(title = "Unscaled PCA Biplot")
+```
+
+* From the above summary statistics we had see that liver and testes had greater variation than other features. And knowing this if we apply pca it results in PC1 capturing much of the variation of liver and PC2 capturing much of the variation of testes. Hence our top two principal components are not able to caputre the variation of other features. Hence scaling our features might help to mitigate this problem.
+
+
+```{r}
+hamster_scale = prcomp(hamster, scale. =TRUE)
+ggbiplot(hamster_scale, scale = 1) +
+  labs(title = "Scaled PCA Biplot")
+```
+* Once we have scale and apply pca we see that our our top two principal components capture variation of all the features rather than only two features. Hence we can say that our data is getting projected on principal components that captures variance from all dimensions.
+
+
+## 2
+The data set http://jfukuyama.github.io/teaching/stat670/assignments/nyt_articles.csv
+has tf-idf-normalized word frequencies for the set of articles. Do a PCA on this matrix and
+create a plot giving the sample points on the principal plane, colored by article type.
+Does the PCA with the standardized variables tell you something different than the PCA
+with the un-standardized variables? Which one is more useful for this data set? What does
+it tell you about the articles?
+
+
+
+```{r}
+nyt_articles<-read_csv("http://jfukuyama.github.io/teaching/stat670/assignments/nyt_articles.csv")
+head(nyt_articles)
+```
+
+```{r}
+temp<-nyt_articles[c(2:dim(nyt_articles)[2])]
+hist(apply(temp,2,sd), main = "Histogram of Standard Deviation of Words in corpus",
+      xlab = "Standard Deviation") 
+```
+
+* From the above histogram we can see that the variation of all the features in the nyt_articles data are similar. This means that the scale of all the features are similar and the spread is more or less same for all features.
+
+```{r}
+
+nyt_articles_1<-temp[,colSums(temp!= 0) > 0]
+nyt_article_noscale = prcomp(nyt_articles_1, scale. =FALSE)
+pc<-data.frame(nyt_article_noscale$x[,1:2],nyt_articles$class.labels)
+ggplot(pc) +
+    geom_point(aes(x=PC1,y=PC2,color = nyt_articles.class.labels)) +
+  labs(x = "Principal Component 1", y = "Principal Component 2",
+       title = "Scatter plot of projected points on principal components without standardization",color="Class label")  
+```
+
+```{r}
+#nyt_articles_1<-temp[,colSums(temp!= 0) > 0]
+nyt_article_scale = prcomp(nyt_articles_1, scale. =TRUE)
+pc2<-data.frame(nyt_article_scale$x[,1:2],nyt_articles$class.labels)
+ggplot(pc2) +
+    geom_point(aes(x=PC1,y=PC2,color = nyt_articles.class.labels)) +
+  labs(x = "Principal Component 1", y = "Principal Component 2",
+       title = "Scatter plot of projected points on principal components using standardization",color="Class label")   
+```
+
+* From the variable un-standardized plot of the pca we can see that our top two Principal components are capturing variation of certain features from the input data that distinguishes the art and music news articles. This can be seen in the plot. We can visually see two clusters of pink and blue points representing art and music articles respectively.
+
+* But in case of standardized plot of pca we cannot distinguish the two classes of news article. We are already given normalized data. Normalization is a scaling technique in which values are shifted and rescaled so that they end up ranging between 0 and 1. So there is no need to again standardize that data.
+
+* Hence in this case when the scale of all features is similar for all features, there is no need for standardization. Hence in this case applying pca on un-standardized features is more useful.
+
+* From the above plots we can say that there are certain features associated to music and art news articles that are different and that variation in features data is captured by our top two principal components.
+
+
+## 3
+
+The loadings of the variables (words) on the principal axes are stored in the rotation slot
+in the output from prcomp. There are too many of these to visualize all of them at once,
+so we’ll just look at a set of them that have the largest loadings on the principal axes. Plot
+the biplot axes corresponding to the variables with the largest loadings on the principal
+axes, and describe what the axes suggest about the differences between articles about art
+and articles about music.
+
+```{r}
+rot <-data.frame(nyt_article_noscale$rotation[,1:2])
+rot_0<-rot[order(-rot$PC1),][1:5,]
+rot_1<-rot[order(-rot$PC2),][1:5,]
+nyt_x <- data.frame(nyt_article_noscale$x,nyt_articles$class.labels)
+ggplot() +
+    geom_point(aes(x = PC1, y = PC2,color=nyt_articles.class.labels), data = nyt_x) +
+    geom_segment(aes(xend = PC1*2, yend = PC2*2, x = 0, y = 0), data = rot_0, 
+                 arrow = arrow(length = unit(0.1, "inches"))) +
+    geom_text_repel(aes(x = PC1*2, y = PC2*2, label = row.names(rot_0)), data = rot_0)+
+    labs(x = "Principal Componet 1", y = "Principal Component 2",
+         title = "Biplot with loadings ordered by first principal component")
+
+ggplot() +
+    geom_point(aes(x = PC1, y = PC2,color=nyt_articles.class.labels), data = nyt_x) +
+    geom_segment(aes(xend = PC1*2, yend = PC2*2, x = 0, y = 0), data = rot_1, 
+                 arrow = arrow(length = unit(0.1, "inches"))) +
+    geom_text_repel(aes(x = PC1*2, y = PC2*2, label = row.names(rot_1)), data = rot_1) +
+    labs(x = "Principal Componet 1", y = "Principal Component 2",
+         title = "Biplot with loadings ordered by second principal component")
+
+```
+
+* In this case we have scaled the length of the segment so as to make visible.
+
+* Plotting the biplot axes using the largest loadings ordered by PC1, we can observe that PC1 captures features that are most commonly found in music articles i.e PC1 captures most of the variance
+of articles that are classified as music articles.
+
+* Plotting the biplot axes using the largest loadings ordered by PC2,  we can observe that PC2 captures features that are most commonly found in art articles i.e PC2 captures most of the variance
+of articles that are classified as art articles.
+
+* Since each principal component captures variance from a single class label which suggests that articles about art and articles about music have different set of words present in them.
+
+
