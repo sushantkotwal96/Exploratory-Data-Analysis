@@ -1,0 +1,129 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+load("lattice.RData")
+library(reshape2)
+library(dplyr)
+```
+
+
+```{r}
+head(food.web)
+```
+```{r}
+library(ggplot2)
+```
+
+# Q.1)
+
+# Answer:
+
+1. We first plot the mean.length attribute on Q-normal plot faceted by Dimension
+```{r}
+ggplot(food.web,aes(sample=mean.length)) + stat_qq() + facet_wrap(~ dimension) + stat_qq_line()
+```
+2. For the dimension Two, we can see that the quantiles for the mean.length do not lie in a straight line and the data is too peaked in the middle.
+3. This shows that data for dimension Two is not described by a normal distribution
+4. For the dimension Mixed and dimension Three, we can see that the quantiles do not lie in a straight line for either of the two.
+5. So we can say that the data does not follow the Normal Distribution for any of the given dimensions.
+6. To normalize the data, we can use transformations like Log and Power Transformations.
+
+
+
+# Q.2)
+
+# Answer:
+
+1. We first created a function for Box-Cox Transformation. Using this function we can use both the Log Transformation(in case Tau is 0) and Power Transformation(in case Tau is non-zero value)
+```{r}
+bc_trans = function(x, tau) {
+    if(tau == 0){
+        return(log(x))
+    }
+    return((x^tau - 1) / tau)
+}
+```
+
+2. Then we apply the function on our data to get Power transformed values of mean.length attribute
+```{r}
+tau_vec = seq(-1,-1)
+transforms = sapply(tau_vec, function(tau) bc_trans(food.web$mean.length, tau))
+transforms_melted = melt(transforms)
+transforms_for_plotting = transforms_melted %>% mutate(Original_value=food.web$mean.length[Var1],tau = tau_vec[Var2],dimension=food.web$dimension[Var1])
+
+```
+
+```{r}
+head(transforms_melted)
+head(transforms_for_plotting)
+```
+
+3. We can see our original value and the value we get after applying Power Transformation
+4. Then we plot our data on the Q-normal plots according to each dimension
+```{r}
+ggplot(transforms_for_plotting) + stat_qq(aes(sample = value)) +facet_wrap(~ dimension, scales = "free", ncol = 3) + stat_qq_line(aes(sample = value)) +
+ggtitle("Q-normal plots for Inverse mean.length (Power Transformation)  for each dimension")
+```
+5. From the above plots, we see that for dimension Two there is significant difference in the distributions as compared to before applying transformation. However the points still do not lie in a straight line and hence we can say that it does not follow normal distribution.
+6. For the dimension Mixed and Three, we see though the transformation has made a difference in distribution but the data for both seems to be right-skewed.
+
+
+```{r}
+tau_vec2 = seq(0,0)
+transforms2 = sapply(tau_vec2, function(tau) bc_trans(food.web$mean.length, tau))
+transforms_melted2 = melt(transforms2)
+transforms_for_plotting2 = transforms_melted2 %>% mutate(Original_value=food.web$mean.length[Var1],tau = tau_vec2[Var2],dimension=food.web$dimension[Var1])
+
+```
+
+7. Here we can see the original value with the value obtained after applying Log Transformation to the mean.length attribute.
+```{r}
+
+head(transforms_melted2)
+head(transforms_for_plotting2)
+```
+
+8. Then we plot our data on the Q-normal plots according to each dimension
+```{r}
+ggplot(transforms_for_plotting2) +
+    stat_qq(aes(sample = value)) +
+    facet_wrap(~ dimension, scales = "free", ncol = 3) + stat_qq_line(aes(sample = value))+
+ggtitle("Q-normal plots for Log Transformation of mean.length for each dimension")
+```
+9. From the above plots, we can see for dimension Two that that though Log transformation has changed the data distribution it is stil less normally distributed in comparison with Power Transformation and does not follow normal distribution
+10. The dimension Mixed seems to have right-skewed distribution but its still not normally distributed.
+11. The dimension Three is better and seems that points almost lie in a straight line.
+12. So we can conclude that applying these transformations has surely made data more normalized.
+
+# Q3)
+
+```{r}
+ food_lm =lm(value ~ dimension, data=transforms_for_plotting)
+```
+
+```{r}
+food_res = data.frame(dimension = food.web$dimension, residual = residuals(food_lm))
+```
+
+```{r}
+head(food_res)
+```
+
+
+
+
+
+```{r}
+ggplot(food_res, aes(sample = residual)) +
+  stat_qq() + facet_wrap(~ dimension, ncol=3) + stat_qq_line()
+
+```
+
+
+```{r}
+ggplot(food_res, aes(sample = residual)) +
+  stat_qq() + geom_abline(intercept = 0, slope = sd(food_res$residual))
+```
